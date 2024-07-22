@@ -48,6 +48,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   parantWorld: {fileID: 0}
+  Blocks: {fileID: 11400000, guid: cd2e5d42bdeee5d4ba0251ba2312292d, type: 2}
 --- !u!33 &1825805433394222311
 MeshFilter:
   m_ObjectHideFlags: 0

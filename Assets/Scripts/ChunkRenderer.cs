@@ -1,18 +1,21 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer),typeof(MeshCollider))]
 public class ChunkRenderer : MonoBehaviour
 {
-	public const int chunkWidth=64;
+	public const int chunkWidth=32;
 	public const int chunkHeight=128;
-	public const float blockScale=0.5f;
+	public const float blockScale=0.125f;
 	public GameWorld parantWorld;
+	public BlocksDataBase Blocks;
 	
 	Mesh chunkMesh;
 	public ChunkData chunkData;
 	private List<Vector3> verticies = new List<Vector3>();
+	private List<Vector2> uvs = new List<Vector2>();
 	private List<int> triangles = new List<int>();
 
 
@@ -27,6 +30,7 @@ public class ChunkRenderer : MonoBehaviour
 	void RegenerateMesh()
 	{
 		verticies.Clear();
+		uvs.Clear();
 		triangles.Clear();
 		for (int x = 0; x < chunkWidth; x++)
 		{
@@ -39,6 +43,7 @@ public class ChunkRenderer : MonoBehaviour
 		
 		chunkMesh.triangles = Array.Empty<int>();
 		chunkMesh.vertices = verticies.ToArray();
+		chunkMesh.uv = uvs.ToArray();
 		chunkMesh.triangles = triangles.ToArray();
 		chunkMesh.Optimize();
 
@@ -50,7 +55,7 @@ public class ChunkRenderer : MonoBehaviour
 	}
 	public void SpawnBlock(Vector3Int blockPostition)
 	{
-		chunkData.blocks[blockPostition.x,blockPostition.y,blockPostition.z] = BlockType.Grass;
+		chunkData.blocks[blockPostition.x,blockPostition.y,blockPostition.z] = BlockType.Stone;
 		RegenerateMesh();
 	}
 	
@@ -63,15 +68,40 @@ public class ChunkRenderer : MonoBehaviour
 	{
 		
 		var blockPosition = new Vector3Int(x,y,z);
+		BlockType blockType=GetBlockAtPosition(blockPosition);
 		
 		if(GetBlockAtPosition(blockPosition)==BlockType.Air) return;
 		
-		if(GetBlockAtPosition(blockPosition+Vector3Int.right)==BlockType.Air) GenerateRightSide(blockPosition);
-		if(GetBlockAtPosition(blockPosition+Vector3Int.left)==BlockType.Air) GenerateLeftSide(blockPosition);
-		if(GetBlockAtPosition(blockPosition+Vector3Int.forward)==BlockType.Air) GenerateFrontSide(blockPosition);
-		if(GetBlockAtPosition(blockPosition+Vector3Int.back)==BlockType.Air) GenerateBackSide(blockPosition);
-		if(GetBlockAtPosition(blockPosition+Vector3Int.up)==BlockType.Air) GenerateTopSide(blockPosition);
-		if(GetBlockAtPosition(blockPosition+Vector3Int.down)==BlockType.Air) GenerateBottomSide(blockPosition);
+		if(GetBlockAtPosition(blockPosition+Vector3Int.right)==BlockType.Air) 
+		{
+			GenerateRightSide(blockPosition);
+			AddUvs(blockType,Vector3Int.right);
+		}
+		if(GetBlockAtPosition(blockPosition+Vector3Int.left)==BlockType.Air) 
+		{
+			GenerateLeftSide(blockPosition);
+			AddUvs(blockType,Vector3Int.left);
+		}
+		if(GetBlockAtPosition(blockPosition+Vector3Int.forward)==BlockType.Air) 
+		{
+			GenerateFrontSide(blockPosition);
+			AddUvs(blockType,Vector3Int.forward);
+		}
+		if(GetBlockAtPosition(blockPosition+Vector3Int.back)==BlockType.Air) 
+		{
+			GenerateBackSide(blockPosition);
+			AddUvs(blockType,Vector3Int.back);
+		}
+		if(GetBlockAtPosition(blockPosition+Vector3Int.up)==BlockType.Air) 
+		{
+			GenerateTopSide(blockPosition);
+			AddUvs(blockType,Vector3Int.up);
+		}
+		if(GetBlockAtPosition(blockPosition+Vector3Int.down)==BlockType.Air)
+		{
+			GenerateBottomSide(blockPosition);
+			AddUvs(blockType,Vector3Int.down);
+		}
 	}
 	BlockType GetBlockAtPosition(Vector3Int blockPosition)
 	{
@@ -151,7 +181,6 @@ public class ChunkRenderer : MonoBehaviour
 		verticies.Add((new Vector3(1, 1, 0) + blockPosition)*blockScale);
 		AddLastVerticiesSquare();
 	}
-	
 	void GenerateTopSide(Vector3Int blockPosition)
 	{
 		verticies.Add((new Vector3(0, 1, 0) + blockPosition)*blockScale);
@@ -172,6 +201,8 @@ public class ChunkRenderer : MonoBehaviour
 	
 	void AddLastVerticiesSquare()
 	{
+		
+		
 		triangles.Add(verticies.Count-4);
 		triangles.Add(verticies.Count-3);
 		triangles.Add(verticies.Count-2);
@@ -181,4 +212,23 @@ public class ChunkRenderer : MonoBehaviour
 		triangles.Add(verticies.Count-1);
 		triangles.Add(verticies.Count-2);
 	}
+	void AddUvs(BlockType blockType,Vector3Int normal)
+	{
+		Vector2 uv;
+		BlockInfo info = Blocks.GetInfo(blockType);
+		if(info!=null)
+		{
+			uv= info.GetPixelOffset(normal)/256;
+		}
+		
+		else
+		{
+			uv = new Vector2(160f/256,224f/256);
+		}
+		for(int i = 0; i < 4; i++)
+		{
+			uvs.Add(uv);
+		}
+	}
 }
+

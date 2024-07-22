@@ -5,32 +5,20 @@ using UnityEngine;
 public class GameWorld : MonoBehaviour
 {
 	public Dictionary<Vector2Int,ChunkData> ChunksDatas = new Dictionary<Vector2Int, ChunkData>();
-	public ChunkRenderer chunkPrefab;
+	public ChunkRenderer chunkPrefab; 
+	public TerrainGenerator terrainGenerator;
+	
+	public
 	Camera mainCamera=> Camera.main;
+	Vector2Int currectPlayerChunk;
+	public int viewRadius=5;
 	
 	void Start()
 	{
-		for (int x = 0; x<1;x++)
-		{
-			for(int y=0;y<1;y++)
-			{
-				var xPos= (int)(x*ChunkRenderer.chunkWidth*ChunkRenderer.blockScale);
-				var zPos= (int)(y*ChunkRenderer.chunkWidth*ChunkRenderer.blockScale);
-				
-				ChunkData chunkData=new ChunkData();
-				chunkData.chunkPosition= new Vector2Int(x,y);
-				chunkData.blocks=TerrainGenerator.GenerateTerrain(xPos,zPos);
-				ChunksDatas.Add(new Vector2Int(x,y), chunkData);
-				
-				var chunk = Instantiate(chunkPrefab,new Vector3(xPos,0,zPos),Quaternion.identity,transform);
-				chunk.chunkData=chunkData;
-				chunk.parantWorld=this;
-				chunkData.chunkRenderer=chunk;
-			}
-		}
+		terrainGenerator.Init();
+		Generate();
 	}
-	
-	void Update()
+	void CheckInput()
 	{
 		if(Input.GetButtonDown("Fire2")|| Input.GetButtonDown("Fire1"))
 		{
@@ -58,8 +46,66 @@ public class GameWorld : MonoBehaviour
 			}
 		}	
 	}
+	
+	void Update()
+	{
+		Vector3Int playerWorldPos= Vector3Int.FloorToInt(mainCamera.transform.position/ChunkRenderer.blockScale);
+		Vector2Int playerChunk =GetChunkContainingBlock(playerWorldPos);
+		if(playerChunk!=currectPlayerChunk	)
+		{
+			currectPlayerChunk=playerChunk;
+			Generate();
+		}
+		CheckInput();
+	}
+	void Generate()
+	{
+		
+		for (int x = currectPlayerChunk.x-viewRadius; x< currectPlayerChunk.x+viewRadius;x++)
+		{
+			for(int y=currectPlayerChunk.y-viewRadius; y< currectPlayerChunk.y+viewRadius;y++)
+			{
+				Vector2Int chunkDataPosition=new Vector2Int(x,y);
+				if(ChunksDatas.ContainsKey(chunkDataPosition)) continue;
+				
+				LoadAtChunk(chunkDataPosition);
+			}
+		}
+	}
+	[ContextMenu("Regenerate terrain")]
+	public void Regenerate()
+	{
+		terrainGenerator.Init();
+		foreach( var chunckData in ChunksDatas)
+		{
+			Destroy(chunckData.Value.chunkRenderer.gameObject);
+			
+		}
+		ChunksDatas.Clear();
+		Generate();
+	}
+	void LoadAtChunk(Vector2Int chunkPosition)
+	{
+		var xPos= chunkPosition.x*ChunkRenderer.chunkWidth*ChunkRenderer.blockScale;
+		var zPos= chunkPosition.y*ChunkRenderer.chunkWidth*ChunkRenderer.blockScale;
+				
+		ChunkData chunkData=new ChunkData();
+		chunkData.chunkPosition= chunkPosition;
+		chunkData.blocks=terrainGenerator.GenerateTerrain(xPos,zPos);
+		ChunksDatas.Add(chunkPosition, chunkData);
+				
+		var chunk = Instantiate(chunkPrefab,new Vector3(xPos,0,zPos),Quaternion.identity,transform);
+		chunk.chunkData=chunkData;
+		chunk.parantWorld=this;
+		chunkData.chunkRenderer=chunk;
+	}
 	public Vector2Int GetChunkContainingBlock(Vector3Int blockWorldPos)
 	{
-		return  new Vector2Int(blockWorldPos.x/ChunkRenderer.chunkWidth,blockWorldPos.z/ChunkRenderer.chunkWidth);
+		Vector2Int chunkPosition = new Vector2Int(blockWorldPos.x/ChunkRenderer.chunkWidth,blockWorldPos.z/ChunkRenderer.chunkWidth);
+		
+		if(blockWorldPos.x<0) chunkPosition.x--;
+		if(blockWorldPos.z<0) chunkPosition.y--;
+		
+		return  chunkPosition;
 	}
 }
