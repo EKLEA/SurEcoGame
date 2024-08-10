@@ -3,11 +3,12 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Xml.Serialization;
 using UnityEngine;
+using UnityEngine.AI;
 
 [CreateAssetMenu(menuName = "Game/Terrain")]
 public class TerrainGenerator : ScriptableObject
 {
-	public float baseHeight=8;
+	public float baseHeight=4;
 	public float grassLayerHeight= 1;
 	public NoiseOctaveSettings[] Octaves;
 	public NoiseOctaveSettings DomainWarp;
@@ -39,25 +40,29 @@ public class TerrainGenerator : ScriptableObject
 		warpNoise.SetDomainWarpAmp(DomainWarp.amplitude);
 	}
 	
-	public BlockType[,,] GenerateTerrain(float xOffset,float zOffset)
+	public BlockType[] GenerateTerrain(float xOffset,float zOffset)
 	{
-		var result = new BlockType[ChunkRenderer.chunkWidth,ChunkRenderer.chunkHeight,ChunkRenderer.chunkWidth];
+		var result = new BlockType[MeshBuilder.chunkWidth*MeshBuilder.chunkHeight*MeshBuilder.chunkWidth];
 		
-		for(int x = 0; x < ChunkRenderer.chunkWidth; x++)
+		for(int x = 0; x < MeshBuilder.chunkWidth; x++)
 		{
-			for(int z = 0; z < ChunkRenderer.chunkWidth;z++)
+			for(int z = 0; z < MeshBuilder.chunkWidth;z++)
 			{
-				//float height =Mathf.PerlinNoise((x+xOffset)*0.2f,(z+zOffset)*0.2f)*2+10;
-				float height = GetHeight(x*ChunkRenderer.blockScale+xOffset,z*ChunkRenderer.blockScale+zOffset);
+				float worldX = x * MeshBuilder.blockScale+xOffset;
+				float worldZ = z * MeshBuilder.blockScale+zOffset;
+				
+				float height = GetHeight(worldX,worldZ);
 				
 				
-				for(int y = 0; y<height/ChunkRenderer.blockScale; y++)
+				for(int y = 0; y<height/MeshBuilder.blockScale; y++)
 				{
-					if(height-y*ChunkRenderer.blockScale<grassLayerHeight)
-						result[x,y,z]=BlockType.Grass;
+					int index =x+y * MeshBuilder.chunkWidthSq+z*MeshBuilder.chunkWidth;
+					
+					if(height-y*MeshBuilder.blockScale<grassLayerHeight)
+						result[index]=BlockType.Grass;
 					else
 					{
-						result[x,y,z]= BlockType.Stone;
+						result[index]= BlockType.Stone;
 					}
 				}
 			}

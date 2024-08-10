@@ -18,7 +18,7 @@ MonoBehaviour:
   - noiseType: 0
     frequency: 0.6
     amplitude: 0.2
-  - noiseType: 2
+  - noiseType: 0
     frequency: 0.008
     amplitude: 16
   DomainWarp:

@@ -45,6 +45,8 @@ Shader "World Shader"
             float z=IN.worldPos.z*_TextureScale;
 
             float isUp=abs(IN.worldNormal.y);
+
+
             float2 offset = float2( my_fmod(z+x*(1-isUp),0.0625),my_fmod(y+x*isUp,0.0625));
             fixed4 c = tex2D(_MainTex, IN.uv_MainTex + offset);
             o.Albedo = c.rgb;

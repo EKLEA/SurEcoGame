@@ -3,20 +3,22 @@ using System.Collections.Generic;
 using Unity.VisualScripting;
 using UnityEngine;
 
-[CreateAssetMenu(menuName = "Game/Blocks/DB")]
-public class BlocksDataBase : ScriptableObject
+
+public class BlocksDataBase 
 {
-	[SerializeField] private BlockInfo[] Blocks;
-	private Dictionary<BlockType,BlockInfo> blocksCached = new Dictionary<BlockType,BlockInfo>();
-	void OnEnable()
+	private static Dictionary<BlockType,BlockInfo> blocksCached = new Dictionary<BlockType,BlockInfo>();
+	public static void Init()
 	{
 		blocksCached.Clear();
-		foreach (var blockInfo in Blocks)
+		Object[] assets = Resources.LoadAll<BlockInfo>("");
+		foreach (object obj in assets)
 		{
-			blocksCached.Add(blockInfo.type, blockInfo);
+			BlockInfo so = obj as BlockInfo;
+			if (!blocksCached.ContainsValue(so))
+				blocksCached.Add(so.type, so);
 		}
 	}
-	public BlockInfo GetInfo(BlockType type)
+	public static BlockInfo GetInfo(BlockType type)
 	{
 		//if(blocksCached.Count==0) Init();
 		if(blocksCached.TryGetValue(type, out var blockInfo))
