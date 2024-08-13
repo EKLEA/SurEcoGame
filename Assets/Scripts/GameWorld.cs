@@ -24,7 +24,7 @@ public class GameWorld : MonoBehaviour
 	
 	void Start()
 	{
-		BlocksDataBase.Init();
+		InfoDataBase.InitBases();
 		ChunkRenderer.InitTriangles();
 		terrainGenerator.Init();
 		StartCoroutine(Generate(false));

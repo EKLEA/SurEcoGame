@@ -51,7 +51,7 @@ public class InventoryGrid : IReadOnlyInventoryGrid
 		
 		var itemsAddedToAvailableSlotsAmount = AddToFirstAvailableSlots(itemID,remainingAmount,out remainingAmount);
 		var totalAddedItemsAmount= itemsAddedToSlotsWithSameItemsAmount+itemsAddedToAvailableSlotsAmount;
-		
+		ItemsAdded?.Invoke(itemID,totalAddedItemsAmount);
 		return new AddItemsToInventoryGridResult(OwnerID,amount,totalAddedItemsAmount);
 		
 		//remainingamount оставить для логики, если не влезл в инвентарь
@@ -81,6 +81,7 @@ public class InventoryGrid : IReadOnlyInventoryGrid
 			itemsAddedAmount=amount;
 			slot.Amount=newValue;
 		}
+		ItemsAdded?.Invoke(itemID,itemsAddedAmount);
 		return new AddItemsToInventoryGridResult(OwnerID,amount,itemsAddedAmount);
 	}
 	public RemoveItemsFromInventoryGridResult RemoveItems(string itemID,int  amount=1)
@@ -107,6 +108,7 @@ public class InventoryGrid : IReadOnlyInventoryGrid
 					RemoveItems(slotCoords, itemID,amountToRemove);
 					return new RemoveItemsFromInventoryGridResult(OwnerID,amount,true);
 				}
+				ItemsRemoved?.Invoke(itemID,amount);
 			}
 		}
 		throw new Exception("Something went wrong, couldn`t remove some items");
@@ -119,6 +121,7 @@ public class InventoryGrid : IReadOnlyInventoryGrid
 		
 		slot.Amount-=amount;
 		if(slot.Amount==0) slot.ItemID=null;
+		ItemsRemoved?.Invoke(itemID,amount);
 		return new RemoveItemsFromInventoryGridResult(OwnerID,amount,true);
 	}
 	public int GetAmount(string itemID)
@@ -241,6 +244,6 @@ public class InventoryGrid : IReadOnlyInventoryGrid
 	}
 	int GetItemSlotCapacity(string itemID)
 	{
-		return 256;//тут брать из базы предметов
+		return InfoDataBase.ItemsDataBase.GetInfo(itemID).maxInSlot;//тут брать из базы предметов
 	}
 }

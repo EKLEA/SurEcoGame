@@ -245,7 +245,7 @@ public static class MeshBuilder
 	}
 	static void GetUvs(BlockType blockType, Vector3Int normal,out ushort x,out ushort y)
 	{
-		BlockInfo blockInfo = BlocksDataBase.GetInfo(blockType);
+		BlockInfo blockInfo = InfoDataBase.BlockDataBase.GetInfo(blockType);
 		if (blockInfo != null) 
 		{
 			Vector2 resVec = blockInfo.GetPixelOffset(normal);
