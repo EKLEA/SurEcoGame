@@ -68,17 +68,15 @@ public class ChunkRenderer : MonoBehaviour
 		
 		GetComponent<MeshCollider>().sharedMesh = chunkMesh;
 	}
-	public void SpawnBlock(Vector3Int blockPosition)
-	{
-		int index =blockPosition.x + blockPosition.y * MeshBuilder.chunkWidthSq + blockPosition.z*MeshBuilder.chunkWidth;
-		chunkData.blocks[index] = BlockType.Stone;
-		RegenerateMesh();
-	}
 	
-	public void DestroyBlock(Vector3Int blockPosition)
+	public void PlaceBlock(Dictionary<Vector3Int,BlockType> blockList)
 	{
-		int index =blockPosition.x + blockPosition.y * MeshBuilder.chunkWidthSq + blockPosition.z*MeshBuilder.chunkWidth;
-		chunkData.blocks[index] = BlockType.Air;
+		foreach(var blockPosition in blockList.Keys)
+		{
+			int index =blockPosition.x + blockPosition.y * MeshBuilder.chunkWidthSq + blockPosition.z*MeshBuilder.chunkWidth;
+			chunkData.blocks[index] = blockList[blockPosition];
+		}
+		
 		RegenerateMesh();
 	}
 	void RegenerateMesh()

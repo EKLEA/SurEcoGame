@@ -11,4 +11,14 @@ public class ItemInfo : ScriptableObject
 	public Vector2Int PixelsOffset;
 	public int SizeOfTexture;
 	public int maxInSlot;
+	public ItemType itemType;
+	
+}
+public enum ItemType :byte
+{
+	SimpleItem=0,
+	Block=1,
+	StructureBlock=2,
+	UsableItem=3,
+	
 }

@@ -29,37 +29,47 @@ public class GameWorld : MonoBehaviour
 		terrainGenerator.Init();
 		StartCoroutine(Generate(false));
 	}
-	void CheckInput()
+	public void PlaceBLock(Dictionary<Vector3Int,BlockType> blocks)
 	{
-		if(Input.GetButtonDown("Fire2")|| Input.GetButtonDown("Fire1"))
-		{
-			bool isDestroying= Input.GetButtonDown("Fire1");
-			Ray  ray = mainCamera.ViewportPointToRay(new Vector3(0.5f,0.5f));
+		Ray  ray = mainCamera.ViewportPointToRay(new Vector3(0.5f,0.5f));
 			
-			if(Physics.Raycast(ray, out var hitInfo,PlayerController.Instance.maxDistanceOfItecation))
+		if(Physics.Raycast(ray, out var hitInfo,PlayerController.Instance.maxDistanceOfItecation,PlayerController.Instance.playerMovement.groundLayer))
+		{
+			
+			Vector3 blockCenter=hitInfo.point+hitInfo.normal*MeshBuilder.blockScale/2;
+			
+			Vector3Int blockAreaStartPos= Vector3Int.FloorToInt(blockCenter/MeshBuilder.blockScale);
+			
+			Dictionary<ChunkData,Dictionary<Vector3Int,BlockType>> chunksChanged=new();
+			for(int y=0;y<blocks.Last().Key.y+1;y++)
 			{
-				Vector3 blockCenter;
-				if(isDestroying)
-					blockCenter=hitInfo.point-hitInfo.normal*MeshBuilder.blockScale/2;
-				else
-					blockCenter=hitInfo.point+hitInfo.normal*MeshBuilder.blockScale/2;
-					
-				Vector3Int blockWorldPos= Vector3Int.FloorToInt(blockCenter/MeshBuilder.blockScale);
-				
-				
-				Vector2Int chunkPos = GetChunkContainingBlock(blockWorldPos);
-				
-				
-				if(ChunksDatas.TryGetValue(chunkPos, out var chunkData))
+				for(int x=blocks.Last().Key.x;x>-1;x--)
 				{
-					Vector3Int chunkOrigin = new Vector3Int(chunkPos.x*MeshBuilder.chunkWidth,0,chunkPos.y*MeshBuilder.chunkWidth);
-					if(isDestroying)
-						chunkData.chunkRenderer.DestroyBlock(blockWorldPos-chunkOrigin);
-					else
-						chunkData.chunkRenderer.SpawnBlock(blockWorldPos -chunkOrigin);
+					for(int z=blocks.Last().Key.z;z>-1;z--)
+					{
+						
+						Vector3Int blockWorldPos=blockAreaStartPos +new Vector3Int(x,y,z);
+						
+						Vector2Int chunkPos = GetChunkContainingBlock(blockWorldPos);
+						if(ChunksDatas.TryGetValue(chunkPos, out var chunkData))
+						{
+							Vector3Int chunkOrigin = new Vector3Int(chunkPos.x*MeshBuilder.chunkWidth,0,chunkPos.y*MeshBuilder.chunkWidth);
+							Vector3Int blockChunkPos =blockWorldPos -chunkOrigin;
+							Debug.Log(blockWorldPos.ToString()+" "+chunkOrigin.ToString()+" "+blockChunkPos.ToString());
+						
+							if(!chunksChanged.ContainsKey(chunkData)) chunksChanged.Add(chunkData,new Dictionary<Vector3Int, BlockType>());
+							chunksChanged[chunkData].Add(blockChunkPos,blocks[new Vector3Int(x,y,z)]);
+						}
+					}
 				}
 			}
-		}	
+			foreach( var key in chunksChanged.Keys)
+			{
+				key.chunkRenderer.PlaceBlock(chunksChanged[key]);
+			}		
+			
+		}		
+	
 	}
 	
 	void Update()
@@ -72,8 +82,6 @@ public class GameWorld : MonoBehaviour
 			currentPlayerChunk=playerChunk;
 			StartCoroutine(Generate(true));
 		}
-		CheckInput();
-		
 		if(meshingResult.TryDequeue(out var meshData))
 		{
 			var xPos= meshData.data.chunkPosition.x*MeshBuilder.chunkWidth*MeshBuilder.blockScale;
@@ -201,8 +209,8 @@ public class GameWorld : MonoBehaviour
 	{
 		Vector2Int chunkPosition = new Vector2Int(blockWorldPos.x/MeshBuilder.chunkWidth , blockWorldPos.z/MeshBuilder.chunkWidth);
 		
-		if(blockWorldPos.x<-MeshBuilder.chunkWidth/2) chunkPosition.x--;
-		if(blockWorldPos.z<-MeshBuilder.chunkWidth/2) chunkPosition.y--;
+		if(blockWorldPos.x<0&&!(blockWorldPos.x%32==0)) chunkPosition.x--;
+		if(blockWorldPos.z<0&&!(blockWorldPos.z%32==0)) chunkPosition.y--;
 		
 		return  chunkPosition;
 	}

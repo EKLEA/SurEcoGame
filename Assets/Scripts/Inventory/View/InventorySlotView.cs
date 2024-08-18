@@ -26,6 +26,7 @@ public class InventorySlotView : MonoBehaviour,IDropHandler
 		draggableItem.parentAfterDrag=transform;
 		InventoryItem=draggableItem;
 		GetComponentInParent<InventoryView>().OnSlotsSwitchedInvoke(tempGM,this);
+		PlayerController.Instance.playerState.isDragging=false;
 	}
 	
 	

@@ -15,12 +15,12 @@ MonoBehaviour:
   baseHeight: 8
   grassLayerHeight: 1
   Octaves:
-  - noiseType: 0
-    frequency: 0.6
-    amplitude: 0.2
-  - noiseType: 0
-    frequency: 0.008
-    amplitude: 16
+  - noiseType: 3
+    frequency: 1
+    amplitude: 0
+  - noiseType: 3
+    frequency: 1
+    amplitude: 0
   DomainWarp:
     noiseType: 0
     frequency: 0.2

@@ -5,10 +5,12 @@ using UnityEngine;
 public class PlayerController : MonoBehaviour
 {
 	public PlayerMovement playerMovement=>GetComponent<PlayerMovement>();
+	public PlayerState playerState=>GetComponent<PlayerState>();
+	public PlayerInput playerInput=>GetComponent<PlayerInput>();
 	public float minDistanceOfItecation=0;
 	public float maxDistanceOfItecation=5;
 	public static PlayerController Instance;
-	 private void Awake()
+	private void Awake()
 	{
 		if (Instance != null && Instance != this)
 		{
@@ -31,5 +33,6 @@ public class PlayerController : MonoBehaviour
 		playerMovement.Move(moveVec);
 		if(Input.GetButtonDown("Jump"))
 			playerMovement.JumpMoment();
+		playerInput.CheckInput();
 	}
 }
