@@ -5091,7 +5091,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   currentWorld: {fileID: 290343651}
-  sizeOfBlockArea: {x: 2, y: 2, z: 2}
+  sizeOfBlockArea: {x: 4, y: 4, z: 4}
   isDragging: 0
   isInventoryOpen: 0
   activeHudSlot: 0

@@ -20,7 +20,7 @@ public class PlayerInput : MonoBehaviour
 						for(int y=0;y<PlayerController.Instance.playerState.sizeOfBlockArea.y;y++)
 							for(int z=0;z<PlayerController.Instance.playerState.sizeOfBlockArea.z;z++)
 								blocks[new Vector3Int(x,y,z)]=BlockType.Air;
-					PlayerController.Instance.playerState.currentWorld.PlaceBLock(blocks);
+					PlayerController.Instance.playerState.currentWorld.PlaceBLock(blocks,isDestroying);
 				}
 				else
 				{
@@ -29,7 +29,7 @@ public class PlayerInput : MonoBehaviour
 							for(int z=0;z<PlayerController.Instance.playerState.sizeOfBlockArea.z;z++)
 								blocks[new Vector3Int(x,y,z)]=(itemInfo as BlockItemInfo).blockType;
 				
-					PlayerController.Instance.playerState.currentWorld.PlaceBLock(blocks);
+					PlayerController.Instance.playerState.currentWorld.PlaceBLock(blocks,isDestroying);
 				}
 			}
 			else if(InfoDataBase.ItemsDataBase.GetInfo(itemID).itemType==ItemType.StructureBlock)

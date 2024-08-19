@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -29,33 +30,80 @@ public class GameWorld : MonoBehaviour
 		terrainGenerator.Init();
 		StartCoroutine(Generate(false));
 	}
-	public void PlaceBLock(Dictionary<Vector3Int,BlockType> blocks)
+	public void PlaceBLock(Dictionary<Vector3Int,BlockType> blocks,bool isDestroy)
 	{
 		Ray  ray = mainCamera.ViewportPointToRay(new Vector3(0.5f,0.5f));
 			
 		if(Physics.Raycast(ray, out var hitInfo,PlayerController.Instance.maxDistanceOfItecation,PlayerController.Instance.playerMovement.groundLayer))
 		{
+			Vector2 fromBlockToPlayer = new Vector2(PlayerController.Instance.transform.position.x-hitInfo.point.x,
+													PlayerController.Instance.transform.position.z-hitInfo.point.z).normalized;
+			Vector3 downVector;
+			Vector3 leftVector;
+			if( math.abs(fromBlockToPlayer.x)>=math.abs(fromBlockToPlayer.y))
+			{
+				downVector=new Vector3(math.sign(fromBlockToPlayer.x)/2,0,0);
+				leftVector=new Vector3(0,0,math.sign(fromBlockToPlayer.y)/2);
+			}
+			else
+			{
+				leftVector=new Vector3(math.sign(fromBlockToPlayer.x)/2,0,0);
+				downVector=new Vector3(0,0,math.sign(fromBlockToPlayer.y)/2);
+			}	
+			downVector=downVector*MeshBuilder.blockScale/2;
+			leftVector=leftVector*MeshBuilder.blockScale/2;
+			Vector3 blockCenter= hitInfo.point/MeshBuilder.blockScale;
 			
-			Vector3 blockCenter=hitInfo.point+hitInfo.normal*MeshBuilder.blockScale/2;
+			if(((hitInfo.point.x/((blockCenter+downVector).x-blockCenter.x))==(hitInfo.point.y/((blockCenter+downVector).y-blockCenter.y)))
+			&&((hitInfo.point.x/((blockCenter+downVector).x-blockCenter.x))==(hitInfo.point.z/((blockCenter+downVector).z-blockCenter.z))))
+			{
+				blockCenter+=downVector*2;
+			}
+			if(((hitInfo.point.x/((blockCenter+leftVector).x-blockCenter.x))==(hitInfo.point.y/((blockCenter+leftVector).y-blockCenter.y)))
+			&&((hitInfo.point.x/((blockCenter+leftVector).x-blockCenter.x))==(hitInfo.point.z/((blockCenter+leftVector).z-blockCenter.z))))
+			{
+				blockCenter+=leftVector*2;
+			}
 			
-			Vector3Int blockAreaStartPos= Vector3Int.FloorToInt(blockCenter/MeshBuilder.blockScale);
 			
+			
+			if(Vector3.Cross(hitInfo.normal,Vector3.up).magnitude==0) 
+				blockCenter = isDestroy? 
+				blockCenter-Vector3.up*PlayerController.Instance.playerState.sizeOfBlockArea.y:
+				blockCenter+Vector3.up/2;
+			else
+			{
+				int sizeBlocks=(Vector3.Cross(hitInfo.normal,Vector3.forward).magnitude==0) ?
+				PlayerController.Instance.playerState.sizeOfBlockArea.z:
+				PlayerController.Instance.playerState.sizeOfBlockArea.x;
+				blockCenter = isDestroy? 
+				blockCenter-hitInfo.normal*sizeBlocks:
+				blockCenter+hitInfo.normal*sizeBlocks;
+			}
+			Vector3 blockAreaStartPos =blockCenter;
 			Dictionary<ChunkData,Dictionary<Vector3Int,BlockType>> chunksChanged=new();
 			for(int y=0;y<blocks.Last().Key.y+1;y++)
 			{
-				for(int x=blocks.Last().Key.x;x>-1;x--)
+				for(int x=0;x<blocks.Last().Key.x+1;x++)
 				{
-					for(int z=blocks.Last().Key.z;z>-1;z--)
+					for(int z=0;z<blocks.Last().Key.z+1;z++)
 					{
+						Vector3Int blockWorldPos= Vector3Int.FloorToInt(
+							blockAreaStartPos +
+							downVector.normalized*z+leftVector.normalized*x+
+							Vector3.up*y);
 						
-						Vector3Int blockWorldPos=blockAreaStartPos +new Vector3Int(x,y,z);
-						
+						Debug.Log(blockAreaStartPos +
+							downVector.normalized*z+leftVector.normalized*x+
+							Vector3.up*y);
 						Vector2Int chunkPos = GetChunkContainingBlock(blockWorldPos);
+						//Debug.Log(blockWorldPos.ToString()+" "+blockAreaStartPos.ToString()+" "+chunkPos.ToString());
+						
 						if(ChunksDatas.TryGetValue(chunkPos, out var chunkData))
 						{
 							Vector3Int chunkOrigin = new Vector3Int(chunkPos.x*MeshBuilder.chunkWidth,0,chunkPos.y*MeshBuilder.chunkWidth);
 							Vector3Int blockChunkPos =blockWorldPos -chunkOrigin;
-							Debug.Log(blockWorldPos.ToString()+" "+chunkOrigin.ToString()+" "+blockChunkPos.ToString());
+							//Debug.Log(blockWorldPos.ToString()+" "+chunkOrigin.ToString()+" "+blockChunkPos.ToString());
 						
 							if(!chunksChanged.ContainsKey(chunkData)) chunksChanged.Add(chunkData,new Dictionary<Vector3Int, BlockType>());
 							chunksChanged[chunkData].Add(blockChunkPos,blocks[new Vector3Int(x,y,z)]);
@@ -65,6 +113,7 @@ public class GameWorld : MonoBehaviour
 			}
 			foreach( var key in chunksChanged.Keys)
 			{
+				Debug.Log("updade");
 				key.chunkRenderer.PlaceBlock(chunksChanged[key]);
 			}		
 			
