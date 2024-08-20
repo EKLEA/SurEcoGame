@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Unity.Mathematics;
 using UnityEngine;
@@ -32,55 +33,78 @@ public class GameWorld : MonoBehaviour
 	}
 	public void PlaceBLock(Dictionary<Vector3Int,BlockType> blocks,bool isDestroy)
 	{
+		Vector3Int size=PlayerController.Instance.playerState.sizeOfBlockArea;
 		Ray  ray = mainCamera.ViewportPointToRay(new Vector3(0.5f,0.5f));
 			
 		if(Physics.Raycast(ray, out var hitInfo,PlayerController.Instance.maxDistanceOfItecation,PlayerController.Instance.playerMovement.groundLayer))
 		{
-			Vector2 fromBlockToPlayer = new Vector2(PlayerController.Instance.transform.position.x-hitInfo.point.x,
+			Vector3 fromBlockToPlayer = new Vector3(PlayerController.Instance.transform.position.x-hitInfo.point.x,0,
 													PlayerController.Instance.transform.position.z-hitInfo.point.z).normalized;
 			Vector3 downVector;
 			Vector3 leftVector;
-			if( math.abs(fromBlockToPlayer.x)>=math.abs(fromBlockToPlayer.y))
+			float sizeDestroyBlocks;
+			float sizeSpawnBlocks;
+			int index;
+			if(Vector3.Cross(hitInfo.normal,Vector3.up).magnitude==0)
 			{
-				downVector=new Vector3(math.sign(fromBlockToPlayer.x)/2,0,0);
-				leftVector=new Vector3(0,0,math.sign(fromBlockToPlayer.y)/2);
-			}
+				sizeDestroyBlocks=size.y;
+				sizeSpawnBlocks=0.5f;
+				if( math.abs(fromBlockToPlayer.x)>=math.abs(fromBlockToPlayer.y))
+				{
+					downVector=new Vector3(math.sign(fromBlockToPlayer.x)/2,0,0);
+					index=3;
+				}
+				else
+				{
+					downVector=new Vector3(0,0,math.sign(fromBlockToPlayer.y)/2);
+					index=2;
+				}
+				leftVector= Vector3.Cross(Vector3.up, downVector).normalized/2;
+			} 
 			else
 			{
-				leftVector=new Vector3(math.sign(fromBlockToPlayer.x)/2,0,0);
-				downVector=new Vector3(0,0,math.sign(fromBlockToPlayer.y)/2);
-			}	
-			downVector=downVector*MeshBuilder.blockScale/2;
-			leftVector=leftVector*MeshBuilder.blockScale/2;
+				downVector=Vector3.down/2;
+				if(Vector3.Cross(hitInfo.normal,Vector3.forward).magnitude==0)
+				{
+					sizeSpawnBlocks=size.z;
+					
+					index=0;
+				}
+				else
+				{
+					sizeSpawnBlocks=size.x;
+					index=1;
+				}
+				sizeDestroyBlocks=0.5f;
+				leftVector= Vector3.Cross(Vector3.up, hitInfo.normal).normalized/2;
+			}
+				
+			
+			
 			Vector3 blockCenter= hitInfo.point/MeshBuilder.blockScale;
-			
-			if(((hitInfo.point.x/((blockCenter+downVector).x-blockCenter.x))==(hitInfo.point.y/((blockCenter+downVector).y-blockCenter.y)))
-			&&((hitInfo.point.x/((blockCenter+downVector).x-blockCenter.x))==(hitInfo.point.z/((blockCenter+downVector).z-blockCenter.z))))
+			if(size.x>=2&&size.z>=2	&&	size.x%2==0.0f && size.z%2==0.0f)
 			{
-				blockCenter+=downVector*2;
+				if(((hitInfo.point.x/((blockCenter+downVector).x-blockCenter.x))==(hitInfo.point.y/((blockCenter+downVector).y-blockCenter.y)))
+				&&((hitInfo.point.x/((blockCenter+downVector).x-blockCenter.x))==(hitInfo.point.z/((blockCenter+downVector).z-blockCenter.z)))
+				)
+				{
+					blockCenter+=downVector*2;
+				}
+				if(((hitInfo.point.x/((blockCenter+leftVector).x-blockCenter.x))==(hitInfo.point.y/((blockCenter+leftVector).y-blockCenter.y)))
+				&&((hitInfo.point.x/((blockCenter+leftVector).x-blockCenter.x))==(hitInfo.point.z/((blockCenter+leftVector).z-blockCenter.z))))
+				{
+					blockCenter+=leftVector*2;
+				}
 			}
-			if(((hitInfo.point.x/((blockCenter+leftVector).x-blockCenter.x))==(hitInfo.point.y/((blockCenter+leftVector).y-blockCenter.y)))
-			&&((hitInfo.point.x/((blockCenter+leftVector).x-blockCenter.x))==(hitInfo.point.z/((blockCenter+leftVector).z-blockCenter.z))))
-			{
-				blockCenter+=leftVector*2;
-			}
+			blockCenter = blockCenter 
+			+ leftVector.normalized* MathF.Ceiling((((Vector3.Cross(leftVector,Vector3.forward).magnitude==0)? size.z:size.x)-2)/2.0f)
+			+ downVector.normalized*MathF.Ceiling((((Vector3.Cross(downVector,Vector3.right).magnitude==0)? size.x:size.z) -2)/2.0f);
 			
-			
-			
-			if(Vector3.Cross(hitInfo.normal,Vector3.up).magnitude==0) 
-				blockCenter = isDestroy? 
-				blockCenter-Vector3.up*PlayerController.Instance.playerState.sizeOfBlockArea.y:
-				blockCenter+Vector3.up/2;
-			else
-			{
-				int sizeBlocks=(Vector3.Cross(hitInfo.normal,Vector3.forward).magnitude==0) ?
-				PlayerController.Instance.playerState.sizeOfBlockArea.z:
-				PlayerController.Instance.playerState.sizeOfBlockArea.x;
-				blockCenter = isDestroy? 
-				blockCenter-hitInfo.normal*sizeBlocks:
-				blockCenter+hitInfo.normal*sizeBlocks;
-			}
-			Vector3 blockAreaStartPos =blockCenter;
+			blockCenter = isDestroy? 
+			blockCenter-hitInfo.normal*sizeDestroyBlocks:
+			blockCenter+hitInfo.normal*sizeSpawnBlocks;
+				
+			Vector3Int blockAreaStartPos =Vector3Int.FloorToInt(blockCenter);
 			Dictionary<ChunkData,Dictionary<Vector3Int,BlockType>> chunksChanged=new();
 			for(int y=0;y<blocks.Last().Key.y+1;y++)
 			{
@@ -88,14 +112,9 @@ public class GameWorld : MonoBehaviour
 				{
 					for(int z=0;z<blocks.Last().Key.z+1;z++)
 					{
-						Vector3Int blockWorldPos= Vector3Int.FloorToInt(
-							blockAreaStartPos +
-							downVector.normalized*z+leftVector.normalized*x+
-							Vector3.up*y);
 						
-						Debug.Log(blockAreaStartPos +
-							downVector.normalized*z+leftVector.normalized*x+
-							Vector3.up*y);
+						Vector3Int blockWorldPos= CalculateBlockPosition(index,x,y,z,leftVector,downVector,hitInfo.normal,blockAreaStartPos);
+						
 						Vector2Int chunkPos = GetChunkContainingBlock(blockWorldPos);
 						//Debug.Log(blockWorldPos.ToString()+" "+blockAreaStartPos.ToString()+" "+chunkPos.ToString());
 						
@@ -120,7 +139,26 @@ public class GameWorld : MonoBehaviour
 		}		
 	
 	}
-	
+	Vector3Int CalculateBlockPosition(int option, int x, int y, int z,Vector3 leftVector,Vector3 downVector, Vector3 normalVector,Vector3Int modifyVector)
+	{
+		if (vectorCalculations.TryGetValue(option, out Func<int,int, int,Vector3,Vector3,Vector3,Vector3,Vector3Int> newVec))
+		{
+			return newVec(x, y, z,leftVector,downVector,normalVector,modifyVector);
+		}
+		else
+		{
+			Debug.LogWarning($"Option '{option}' not found!");
+			return Vector3Int.zero; 
+		}
+	}
+	Dictionary<int, Func<int,int,int,Vector3,Vector3,Vector3,Vector3,Vector3Int>>vectorCalculations = new Dictionary<int, Func<int,int, int,Vector3,Vector3,Vector3,Vector3,Vector3Int>>()
+	{
+		{0,(x,y,z,leftVector,donwVector,normalVecor,modifyVector)=>Vector3Int.FloorToInt(modifyVector-leftVector*2*x-donwVector*2*y-normalVecor*z) },
+		{1,(x,y,z,leftVector,donwVector,normalVecor,modifyVector)=>Vector3Int.FloorToInt(modifyVector-leftVector*2*z-donwVector*2*y-normalVecor*x) },
+		{2,(x,y,z,leftVector,donwVector,normalVecor,modifyVector)=>Vector3Int.FloorToInt(modifyVector-leftVector*2*x-donwVector*2*z+normalVecor*y) },
+		{3,(x,y,z,leftVector,donwVector,normalVecor,modifyVector)=>Vector3Int.FloorToInt(modifyVector-leftVector*2*z-donwVector*2*x+normalVecor*y) },
+				
+	};
 	void Update()
 	{
 		Vector3Int playerWorldPos= Vector3Int.FloorToInt(mainCamera.transform.position/MeshBuilder.blockScale);
